@@ -2,10 +2,16 @@ with import <nixpkgs> {};
 mkShell {
   name = "fedavg-pytorch";
 
-  buildInputs = with python3.pkgs; [
+  buildInputs = with python3.pkgs; 
+  let
+    python-with-packages = python.buildEnv.override {
+      extraLibs = with pythonPackages; [ numpy ];
+    };
+  in
+  [
     git
     pip
-    python
+    python-with-packages
     cudaPackages.cudatoolkit_11_3
     cudnn_cudatoolkit_11_3
   ];

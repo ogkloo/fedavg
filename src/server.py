@@ -33,3 +33,17 @@ class Server():
         Warning: Non-deterministic.
         '''
         return sample(self.clients, k=(len(self.clients) * self.participant_portion))
+
+    def measure_latency(client):
+        '''
+        Measures the latency between a client with a very small packet.
+        '''
+        print("Unimplemented!")
+        assert(False)
+
+    def run(self, bind_address, port):
+        '''
+        Starts the server, binding to `bind_address` and `port`.
+        '''
+        print("Unimplemented!")
+        assert(False)
