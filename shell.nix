@@ -5,7 +5,7 @@ mkShell {
   buildInputs = with python3.pkgs; 
   let
     python-with-packages = python.buildEnv.override {
-      extraLibs = with pythonPackages; [ numpy ];
+      extraLibs = with pythonPackages; [ numpy pygame ];
     };
   in
   [
