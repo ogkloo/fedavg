@@ -1,3 +1,14 @@
+'''
+Major thanks to Ece Işık Polat whose code on Towards Data Science was 
+massively helpful to this implementation. Her code can be found here:
+https://towardsdatascience.com/federated-learning-a-simple-implementation-of-fedavg-federated-averaging-with-pytorch-90187c9c9577
+
+However, the code was provided in a series of gists. Together, these did not 
+provide a working implementation, only inspiration for one. This is a working 
+implementation using minimal dependencies (only torch, and optionally requests
+to download the dataset). It trains FashionMnist using a trivial 
+'''
+
 import torch
 from torch import nn
 import random
@@ -128,6 +139,14 @@ def test_loop(dataloader, model, loss_fn):
     correct /= size
     return correct
 
+def apply_avg_weights(weight1, bias1, weight2, bias2, weigh3, bias3, model):
+        model.linear_relu_stack[0].weight.data = weight1.clone()
+        model.linear_relu_stack[0].bias.data = torch.nn.Parameter(bias1.clone())
+        model.linear_relu_stack[2].weight.data = weight2.clone()
+        model.linear_relu_stack[2].bias.data = torch.nn.Parameter(bias2.clone())
+        model.linear_relu_stack[4].weight.data = weight3.clone()
+        model.linear_relu_stack[4].bias.data = torch.nn.Parameter(bias3.clone())
+
 models = models_list(4, training_data)
 for round in range(100):
     round_models = random.sample(models[1:], k=2)
@@ -150,12 +169,7 @@ for round in range(100):
 
     with torch.no_grad():
         for model, _,_,_ in models:
-            model.linear_relu_stack[0].weight.data = weight1.clone()
-            model.linear_relu_stack[0].bias.data = torch.nn.Parameter(bias1.clone())
-            model.linear_relu_stack[2].weight.data = weight2.clone()
-            model.linear_relu_stack[2].bias.data = torch.nn.Parameter(bias2.clone())
-            model.linear_relu_stack[4].weight.data = weight3.clone()
-            model.linear_relu_stack[4].bias.data = torch.nn.Parameter(bias3.clone())
+            apply_avg_weights(weight1, bias1, weight2, bias2, weight3, bias3, model)
 
     test_model,_,_,_ = models[0]
     acc = test_loop(test_dataloader, test_model, loss_fn)
