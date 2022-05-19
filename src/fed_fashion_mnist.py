@@ -47,16 +47,16 @@ class NeuralNetwork(nn.Module):
 def avg_weights(models):
     model = models[0]
 
-    layer1_mean_weight = torch.zeros(size=model.linear_relu_stack[0].weight.shape)
-    layer1_mean_bias = torch.zeros(size=model.linear_relu_stack[0].bias.shape)
+    layer1_mean_weight = torch.zeros(size=model.linear_relu_stack[0].weight.shape).to(device)
+    layer1_mean_bias = torch.zeros(size=model.linear_relu_stack[0].bias.shape).to(device)
 
     # model.linear_relu_stack[1] is a relu layer, so we skip to 2
-    layer2_mean_weight = torch.zeros(size=model.linear_relu_stack[2].weight.shape)
-    layer2_mean_bias = torch.zeros(size=model.linear_relu_stack[2].bias.shape)
+    layer2_mean_weight = torch.zeros(size=model.linear_relu_stack[2].weight.shape).to(device)
+    layer2_mean_bias = torch.zeros(size=model.linear_relu_stack[2].bias.shape).to(device)
 
     # Same as above
-    layer3_mean_weight = torch.zeros(size=model.linear_relu_stack[4].weight.shape)
-    layer3_mean_bias = torch.zeros(size=model.linear_relu_stack[4].bias.shape)
+    layer3_mean_weight = torch.zeros(size=model.linear_relu_stack[4].weight.shape).to(device)
+    layer3_mean_bias = torch.zeros(size=model.linear_relu_stack[4].bias.shape).to(device)
 
     # This is an optimization, with no real logical meaning.
     # It turns off the ability to do backward steps, reducing memory usage.
@@ -106,7 +106,7 @@ def models_list(num_models, ds):
     models = []
     datasets = torch.utils.data.random_split(ds, [int(len(ds)/num_models) for i in range(num_models)])
     for i in range(num_models):
-        model = NeuralNetwork()
+        model = NeuralNetwork().to(device)
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
         dataset = datasets[i]
         loader = DataLoader(dataset, batch_size=64)
@@ -116,6 +116,7 @@ def models_list(num_models, ds):
 def train_loop(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
     for batch, (X, y) in enumerate(dataloader):
+        X,y = X.to(device), y.to(device)
         # Compute prediction and loss
         pred = model(X)
         loss = loss_fn(pred, y)
@@ -136,6 +137,7 @@ def test_loop(dataloader, model, loss_fn):
 
     with torch.no_grad():
         for X, y in dataloader:
+            X,y = X.to(device), y.to(device)
             pred = model(X)
             test_loss += loss_fn(pred, y).item()
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
@@ -152,9 +154,12 @@ def apply_avg_weights(weight1, bias1, weight2, bias2, weigh3, bias3, model):
         model.linear_relu_stack[4].weight.data = weight3.clone()
         model.linear_relu_stack[4].bias.data = torch.nn.Parameter(bias3.clone())
 
-models = models_list(4, training_data)
+models = models_list(10, training_data)
+test_model = NeuralNetwork()
 for round in range(100):
-    round_models = random.sample(models[1:], k=2)
+    for model,_,_,_ in models:
+        model.to(device)
+    round_models = random.sample(models, k=5)
     print(f'Round {round+1}', end='...', flush=True)
     accuracies = []
     # Train the models for an epoch
@@ -165,18 +170,12 @@ for round in range(100):
             accuracies.append(test_loop(test_dataloader, model, loss_fn))
     print(accuracies)
 
-    #m1,_,_,_ = models[0]
-    #m2,_,_,_ = models[4]
-    #print(m1.linear_relu_stack[4].bias == m2.linear_relu_stack[4].bias)
-
-    # Average weights
     weight1, bias1, weight2, bias2, weight3, bias3 = avg_weights([m for m,_,_,_ in round_models])
 
     with torch.no_grad():
         for model, _,_,_ in models:
             apply_avg_weights(weight1, bias1, weight2, bias2, weight3, bias3, model)
+        apply_avg_weights(weight1, bias1, weight2, bias2, weight3, bias3, test_model)
 
-    test_model,_,_,_ = models[0]
     acc = test_loop(test_dataloader, test_model, loss_fn)
     print(f'Global model accuracy: {acc*100}')
-    #print(m1.linear_relu_stack[4].bias == m2.linear_relu_stack[4].bias)
