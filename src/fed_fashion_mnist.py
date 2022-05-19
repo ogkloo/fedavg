@@ -128,9 +128,9 @@ def test_loop(dataloader, model, loss_fn):
     correct /= size
     return correct
 
-models = models_list(20, training_data)
+models = models_list(4, training_data)
 for round in range(100):
-    round_models = random.sample(models, k=5)
+    round_models = random.sample(models[1:], k=2)
     print(f'Round {round+1}', end='...', flush=True)
     accuracies = []
     # Train the models for an epoch
@@ -141,15 +141,23 @@ for round in range(100):
             accuracies.append(test_loop(test_dataloader, model, loss_fn))
     print(accuracies)
 
+    #m1,_,_,_ = models[0]
+    #m2,_,_,_ = models[4]
+    #print(m1.linear_relu_stack[4].bias == m2.linear_relu_stack[4].bias)
+
     # Average weights
     weight1, bias1, weight2, bias2, weight3, bias3 = avg_weights([m for m,_,_,_ in round_models])
 
     with torch.no_grad():
-        # Set new weights
         for model, _,_,_ in models:
-            model.linear_relu_stack[0].weights = weight1
-            model.linear_relu_stack[0].bias = torch.nn.Parameter(bias1)
-            model.linear_relu_stack[2].weights = weight2
-            model.linear_relu_stack[2].bias = torch.nn.Parameter(bias2)
-            model.linear_relu_stack[4].weights = weight3
-            model.linear_relu_stack[4].bias = torch.nn.Parameter(bias3)
+            model.linear_relu_stack[0].weight.data = weight1.clone()
+            model.linear_relu_stack[0].bias.data = torch.nn.Parameter(bias1.clone())
+            model.linear_relu_stack[2].weight.data = weight2.clone()
+            model.linear_relu_stack[2].bias.data = torch.nn.Parameter(bias2.clone())
+            model.linear_relu_stack[4].weight.data = weight3.clone()
+            model.linear_relu_stack[4].bias.data = torch.nn.Parameter(bias3.clone())
+
+    test_model,_,_,_ = models[0]
+    acc = test_loop(test_dataloader, test_model, loss_fn)
+    print(f'Global model accuracy: {acc*100}')
+    #print(m1.linear_relu_stack[4].bias == m2.linear_relu_stack[4].bias)
