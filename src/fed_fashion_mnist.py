@@ -6,7 +6,12 @@ https://towardsdatascience.com/federated-learning-a-simple-implementation-of-fed
 However, the code was provided in a series of gists. Together, these did not 
 provide a working implementation, only inspiration for one. This is a working 
 implementation using minimal dependencies (only torch, and optionally requests
-to download the dataset). It trains FashionMnist using a trivial 
+to download the dataset). 
+
+This example trains FashionMnist using a trivial fully connected
+network. With a single node, this converges in ~10 epochs to ~70% accuracy. With
+more nodes, the accuracy should degrade slightly, since they will have both fewer
+samples and potentially much more non-iid data. Try it on other datasets!
 '''
 
 import torch
