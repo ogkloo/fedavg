@@ -65,41 +65,39 @@ class NeuralNetwork(nn.Module):
         logits = self.linear_relu_stack(x)
         return logits
 
-def avg_weights(models):
-    ''' 
-    Averages the weights of the model described above. All models in the list must
-    be exactly the same.
+def get_params_data(m):
     '''
-    model = models[0]
+    Gets all data values from a model
+    '''
+    return [p.data.clone() for p in m.parameters()]
 
-    layer1_mean_weight = torch.zeros(size=model.linear_relu_stack[0].weight.shape).to(device)
-    layer1_mean_bias = torch.zeros(size=model.linear_relu_stack[0].bias.shape).to(device)
+def avg_weights(ms):
+    '''
+    Average the weights of a list of models.
 
-    # model.linear_relu_stack[1] is a relu layer, so we skip to 2
-    layer2_mean_weight = torch.zeros(size=model.linear_relu_stack[2].weight.shape).to(device)
-    layer2_mean_bias = torch.zeros(size=model.linear_relu_stack[2].bias.shape).to(device)
+    All models must have exactly the same parameter shapes.
+    '''
+    # sum_weights([]) == []
+    if len(ms) == 0:
+        return []
+    zeros = []
+    # Create zero tensors of the required shapes
+    for p in get_params_data(ms[0]):
+        zeros.append(torch.zeros(size=p.shape).to(device))
+    params_by_model = [get_params_data(m) for m in ms]
+    for model in params_by_model:
+        for t,zero in zip(model, zeros):
+            zero += t
+    for t in zeros:
+        t /= len(ms)
+    return zeros
 
-    # Same as above
-    layer3_mean_weight = torch.zeros(size=model.linear_relu_stack[4].weight.shape).to(device)
-    layer3_mean_bias = torch.zeros(size=model.linear_relu_stack[4].bias.shape).to(device)
-
-    # This is an optimization, with no real logical meaning.
-    # It turns off the ability to do backward steps, reducing memory usage.
-    with torch.no_grad():
-        for model in models:
-            layer1_mean_weight += model.linear_relu_stack[0].weight.data.clone()
-            layer1_mean_bias += model.linear_relu_stack[0].bias.data.clone()
-            layer2_mean_weight += model.linear_relu_stack[2].weight.data.clone()
-            layer1_mean_bias += model.linear_relu_stack[2].bias.data.clone()
-            layer3_mean_weight += model.linear_relu_stack[4].weight.data.clone()
-            layer3_mean_bias += model.linear_relu_stack[4].bias.data.clone()
-        layer1_mean_weight = layer1_mean_weight/len(models)
-        layer1_mean_bias = layer1_mean_bias/len(models)
-        layer2_mean_weight = layer2_mean_weight/len(models)
-        layer2_mean_bias = layer2_mean_bias/len(models)
-        layer3_mean_weight = layer3_mean_weight/len(models)
-        layer3_mean_bias = layer3_mean_bias/len(models)
-    return layer1_mean_weight, layer1_mean_bias, layer2_mean_weight, layer2_mean_bias, layer3_mean_weight, layer3_mean_bias
+def apply_weights(w, m):
+    '''
+    Apply the weight data stored in `w` to `m`.
+    '''
+    for p,w_p in zip(m.parameters(),w):
+        p.data = w_p.clone()
 
 '''
 This part of the code shows a simulated test case.
@@ -186,17 +184,6 @@ def test_loop(dataloader, model, loss_fn):
     correct /= size
     return correct
 
-def apply_avg_weights(weight1, bias1, weight2, bias2, weigh3, bias3, model):
-    '''
-    Applies the weight averages.
-    '''
-    model.linear_relu_stack[0].weight.data = weight1.clone()
-    model.linear_relu_stack[0].bias.data = torch.nn.Parameter(bias1.clone())
-    model.linear_relu_stack[2].weight.data = weight2.clone()
-    model.linear_relu_stack[2].bias.data = torch.nn.Parameter(bias2.clone())
-    model.linear_relu_stack[4].weight.data = weight3.clone()
-    model.linear_relu_stack[4].bias.data = torch.nn.Parameter(bias3.clone())
-
 if len(argv) > 1:
     # Number of simulated client devices
     num_clients = int(argv[1])
@@ -231,12 +218,12 @@ for round in range(100):
             accuracies.append(test_loop(test_dataloader, model, loss_fn))
     print(accuracies)
 
-    weight1, bias1, weight2, bias2, weight3, bias3 = avg_weights([m for m,_,_,_ in round_models])
+    ws = avg_weights([m for m,_,_,_ in round_models])
 
     with torch.no_grad():
         for model, _,_,_ in models:
-            apply_avg_weights(weight1, bias1, weight2, bias2, weight3, bias3, model)
-        apply_avg_weights(weight1, bias1, weight2, bias2, weight3, bias3, test_model)
+            apply_weights(ws, model)
+        apply_weights(ws, test_model)
 
     acc = test_loop(test_dataloader, test_model, loss_fn)
     print(f'Global model accuracy: {acc*100:.2f}%')

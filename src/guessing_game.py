@@ -30,8 +30,11 @@ class Game():
 
     def instance(n, k, min_possible_answer, max_possible_answer, f):
         l = []
-        l.extend(Game.add_answer([random.randint(min_possible_answer, max_possible_answer) for _ in range(1,n-1)], f(j)) for j in range(1,k+1))
+        l.extend(Game.add_answer([random.randint(min_possible_answer, max_possible_answer) for _ in range(0,n-1)], f(j)) for j in range(1,k+1))
         return l
+
+    def current_state(self):
+        return self.instance[self.current_level]
 
     def guess(self, guess):
         if guess == self.correct_answer(self.current_level):
