@@ -132,3 +132,5 @@ dmypy.json
 tmp/
 .envrc
 .vscode
+
+data/

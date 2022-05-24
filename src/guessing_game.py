@@ -1,5 +1,23 @@
-import random
+'''
+The Guessing Game.
 
+This game is contrived, but the point is to simplify the definition of game to
+the point that reasoning about what IID data means is very simple. This also
+fits in nicely with reasoning about neural networks based on the UAT.
+
+Each instance of the game is a function generating answers, then filled with
+noise. Normally you would only show correct answers and fit the network. In an
+RL environment, the 'correct' answers are obscured and often difficult to find.
+To simulate this, the correct answers are literally obscured by noise, and the
+reward is hard to find: You only get it at the end of the game. This is
+essentially the normal approximation problem, but embedded in a noisier space.
+
+More importantly, each instance of the game constitutes its own distribution. 
+We can easily think about these instances as being similar to 'labels' in e.x.
+MNIST. Having a few instances would cause a normal network to learn to recognize
+a few different functions.
+'''
+import random
 
 class Game():
     '''
