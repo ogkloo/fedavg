@@ -1,4 +1,4 @@
-\documentclass[10pt,journal,compsoc]{IEEEtran}
+\documentclass[10pt,journal]{IEEEtran}
 \ifCLASSOPTIONcompsoc
   \usepackage[nocompress]{cite}
 \else
@@ -9,28 +9,29 @@
 \else
 \fi
 \hyphenation{op-tical net-works semi-conduc-tor}
+\usepackage[T1]{fontenc}
 \begin{document}
 
-\title{Annotated Bibliography of Federated Learning Papers}
+\title{Proposal for a Benchmarking Method for Non-IID Performance in Horizontal Federated Deep Reinforcement Learning}
 \author{Sam Shippey}
 \IEEEtitleabstractindextext{
-    \begin{abstract}
-        Federated Learning (FL) is an emerging paradigm for training deep learning models
-        in a distributed context on low end devices without requiring each device to submit
-        its data to a global coordinator. Many Reinforcement Learning tasks require huge
-        amounts of data, often gathered from a large number of simultaneous runs through an
-        environment, and are therefore natural fits for FL. However, FL suffers degraded
-        accuracy if the data are not IID. In this paper, I provide code giving a demonstration
-        of an approach called Horizontally Federated Deep Reinforcement Learning (HFDRL),
-        provide a definition and intuition for non-IID data in the context of games, and
-        propose a set of experiments to stress-test new proposed modifications of HFDRL against
-        non-IID data.
-    \end{abstract}
+  \begin{abstract}
+    Federated Learning (FL) is an emerging paradigm for training deep learning models
+    in a distributed context on low end devices without requiring each device to submit
+    its data to a global coordinator. Many Reinforcement Learning tasks require huge
+    amounts of data, often gathered from a large number of simultaneous runs through an
+    environment, and are therefore natural fits for FL. However, FL suffers degraded
+    accuracy if the data are not IID. In this paper, I provide code giving a demonstration
+    of an approach called Horizontal Federated Deep Reinforcement Learning (HFRL),
+    provide a definition and intuition for non-IID data in the context of games, and
+    propose a set of experiments to stress-test new proposed modifications of HFRL against
+    non-IID data.
+  \end{abstract}
 
 
-    \begin{IEEEkeywords}
-        Federated Learning, Machine Learning, Reinforcement Learning
-    \end{IEEEkeywords}}
+  \begin{IEEEkeywords}
+    Federated Learning, Machine Learning, Reinforcement Learning
+  \end{IEEEkeywords}}
 
 
 
@@ -40,7 +41,7 @@
 %\IEEEraisesectionheading{
 %}
 \section{Introduction}\label{sec:introduction}
-Federated Learning (FL)\cite{CITE_TODO mcmahan} takes advantage of the nature of backpropagation
+Federated Learning (FL)\cite{fedavg} takes advantage of the nature of backpropagation
 to efficiently make use of large
 numbers of low end devices as a compute engine for training deep learning models. These
 devices are often assumed to be somehow constrained, whether in terms of compute, memory,
@@ -50,9 +51,9 @@ devices.
 Reinforcement Learning (RL) is a method for approximating optimal control of agent in
 very large state spaces characterized as Markov Reward Processes (MRPs), often with
 sparse rewards. RL approaches have been used to approximate optimal policies
-for complex games, such as Starcraft II\cite{CITE_TODO DeepMind SC2}, DotA II\cite{CITE_TODO OpenAI dota papers},
-and Go\cite{CITE_TODO alphago}. Further, RL approaches have been applied in computer vision\cite{CITE_TODO points of interest from Gdrive}
-and natural language processing\cite{CITE_TODO text game learning}, proving that the method has potential outside
+for complex games, such as Starcraft II\cite{alphastarblog}, DotA II\cite{openai_dota_2019},
+and Go\cite{qi_federated_2021}. Further, RL approaches have been applied in computer vision\cite{bellver_hierarchical_2016}
+and natural language processing\cite{siddique_unsupervised_2020}, proving that the method has potential outside
 of games. One of the key complaints with RL is that the domains in which it is useful are
 often involve data which cannot be gathered immediately: Games must be played under
 a test policy to determine how well that policy works. Since games often have multiple
@@ -64,13 +65,13 @@ However, most games can be tailored to run on low end devices, for instance by t
 graphics settings on a graphically intensive game, or using self play and simulated network
 connections to avoid costly network latency. This makes it a natural fit for FL, which can
 take advantage of the large number of devices without sacrificing accuracy. The method I
-investigate in this paper, Horizontally Federated Deep Reinforcement Learning (HFDRL), involves
+investigate in this paper, Horizontal Federated Deep Reinforcement Learning (HFRL), involves
 each individual device (or simulated device) considering itself as a single agent.
 
 FL approaches suffer when data at the client devices are not "well-mixed", or IID. If the space
 of initial states is relatively small, then this will not become a problem. But in many domains
 of interest (e.g. Go) the first several actions may result in wildly disparate distributions for
-each of the participating client devices. Testing proposed modifications of the HFDRL algorithm
+each of the participating client devices. Testing proposed modifications of the HFRL algorithm
 against these conditions enables higher confidenence that when these methods are applied to real
 world problems, they will sufficiently compensate for non-IID data.
 
@@ -80,26 +81,92 @@ Federated Learning is an emerging paradigm for training deep learning models in 
 which works by averaging the weight changes reported by many devices which have trained some number
 of minibatches on their own private data. A central server then propagates these changes out to
 participating client devices. None of the client devices ever share their data in the process, allowing
-it to remain private\cite{CITE_TODO mcmahan}. This algorithm is called Federated Averaging, or \textbf{FedAvg}.
+it to remain private\cite{fedavg}. This algorithm is called Federated Averaging, or \textbf{FedAvg}.
 Many processes can be added on top of \textbf{FedAvg}, such as participant selection to estimate the
-value of a given device's data\cite{TODO Oort}, or strategies which improve privacy by injecting a small
-amount of noise in the training data or weight updates\cite{TODO DP NOISE}.
+value of a given device's data\cite{lai_oort_2021}, or strategies which improve privacy by injecting a small
+amount of noise in the training data or weight updates\cite{wei_federated_2019}.
 
 Among the key challenges with FL is the presence of non-IID data, or data which are not independent of
 each other or are from different underlying distributions. Since a typical use-case often involves autonomous
 gathering of data at the client side, this can have large effects on test accuracy. To my knowledge at the time
 of writing this, data being IID or not is not a particularly well defined concept for games as it is rarely
 valuable to know, and DRL literature rarely thinks of data in the same way as the larger deep learning community
-because of the constraints of the design space. I therefore aim to define IID data for HFDRL in terms of starting
+because of the constraints of the design space. I therefore aim to define IID data for HFRL in terms of starting
 state spaces.
 
 \section{Reinforcement Learning}
 
+Reinforcement Learning problems are conceptualized as learning a policy $\pi$ which defines an action-value
+function $q_\pi$ and a state-value function $v_\pi$. The policy works over a Markov Reward Process (MRP),
+which is a Markov Decision Process (MDP) that also defines rewards. MDPs can be thought of as being defined
+over graphs where the vertices are game states and the edges are transitions between states weighted
+by how likely that transition is based on a given action. By defining RL problems in this way, we can
+immediately gain insight into the likely distribution of states given a set of actions, and most importantly
+we can reason that future states in an instance of an RL problem are strongly correlated with the initial
+states.
+
+This is difficult to prove, but easy to see intuitively: The initial conditions of a game greatly impact
+the future of the game. An easy example can be found in chess, where openings can greatly control the
+future moves in a game.
+
 \section{Related Work}
 
-\section{Horizontally Federated Deep Reinforcement Learning}
+\section{Horizontal Federated Deep Reinforcement Learning}
 
-\section{Testing non-IID Data in Games}
+There are two natural approaches to training a Reinforcement Learning agent using FL, referred to as
+vertical and horizontal. The difference is in their approach to an instance of the environment. In vertical
+federated deep reinforcement learning (VFRL), all agents share the same environment\cite{qi_federated_2021}, whereas
+in horizontal federated deep reinforcement learning (HFRL), all agents generate their own environments
+independently of each other. In this paper I primarily investigate the impact of non-IID data on HFRL. While
+non-IID data are still a concern in VFRL, and are easier to generate naively by generating an instance
+of a game, then restricting each agent to a small and disjoint subsubset of the action space, this approach
+is impractical for most easily available environments. Namely, environments with relatively small action spaces
+(such as cartpole or pong) or environments with larger action spaces in which roughly all of the action
+space is required to play the game competently (for instance, the atari environments in gym\cite{noauthor_openaigym_2022}) are
+impractical because each agent will learn almost nothing, and our model will be stuck in a local minimum almost
+immediately.
+
+\section{Testing non-IID Data in Games for HFRL}
+
+I attempted one method of evaluating non-IID performance, and propose another using that experience.
+
+In the first attempt, I built a contrived "guessing game", with the following rules:
+
+\begin{enumerate}
+  \item Generate a "correct" sequence of guesses based on the move number
+  \item At each move number, insert the correct answer, alongside $k$ random numbers, then shuffle.
+  \item At each move, the player guesses the number from the list. If this number is correct, increase
+        the move number by one. Otherwise, repeat the move number.
+  \item The player wins when they finish a predetermined number of moves.
+\end{enumerate}
+
+This had several issues, the largest being that the rewards are extremely sparse. Even adding rewards
+for correct guesses usually just resulted in the agent learning to guess. A tool for learning a distribution
+(like a neural network) is very different from a tool for building a tool that learns distributions from very
+few signals.
+
+The proposed method is in some ways more obvious, but requires much more compute, and should have seemed obvious.
+Unfortunately I did not have time to evaluate this method. In HFRL, the distributions that are actually generated
+are environments. Therefore, the trick would be to find clustered but distinct sets of environments that could
+be partitioned in such a way that different agents would learn different subsets of the environment. So in other
+words, a game with enough initial states that the global model would be forced to confront non-IID data. This
+game is difficult to come by. I thought of using chess at first, since the initial moves encode a lot of information
+about the future of the game, but chess is a fairly hard game and so it would not be suitable for quick testing.
+The game I lean toward right now, and would like to try in the future is Pong. The initial states would encode the
+initial positions of the ball and paddles, along with the initial velocity vector of the ball. This would result in
+relatively different distributions of the game without being impossible to learn, and therefore would be suitable
+for rapidly iterating and testing ways to mitigate non-IID data.
+
+\section{Future Work}
+This paper briefly investigates and proposes strategies for evaluating non-IID performance of HFRL, but does not
+show any empirical data. In this regard I was hampered mostly by not understanding how to implement RL algorithms
+very well. Now that I have some hands on experience, I'd like to try to actually implement them and iterate quicker.
+It might also be good to evaluate some mitigation strategies.
+
+As mentioned
+above, VFRL may be significantly more vulnerable to non-IID data. An empirical comparison of the two methods
+non-IID performance would be difficult because they rely on fundamentally different distributions, but would be
+of great value in offering choices between different methodologies.
 
 \section{Conclusion}
 Federated Learning presents an interesting set of challenges and a wide variety of benefits for the field
@@ -108,8 +175,8 @@ By taking advantage of large numbers of client devices without sacrificing priva
 to make deep learning faster, easier, more accessible, and maybe even cheaper.
 
 \ifCLASSOPTIONcaptionsoff
-    \newpage
+  \newpage
 \fi
+\bibliography{rlproject}
 \bibliographystyle{IEEEtran}
-% \bibliography{project1}
 \end{document}
